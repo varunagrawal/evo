@@ -18,16 +18,16 @@ Supported trajectory formats:
 See [here](https://github.com/MichaelGrupp/evo/wiki/Formats) for more infos about the formats.
 
 <a href="https://raw.githubusercontent.com/MichaelGrupp/evo/master/doc/assets/ape_demo_ORB_map.png" target="_blank">
-  <img src="https://raw.githubusercontent.com/MichaelGrupp/evo/master/doc/assets/ape_demo_ORB_map.png" alt="evo" height="200" border="5" />
+  <img src="https://raw.githubusercontent.com/MichaelGrupp/evo/master/doc/assets/ape_demo_ORB_map.png" alt="evo" height="175" border="5" />
 </a>
 <a href="https://raw.githubusercontent.com/MichaelGrupp/evo/master/doc/assets/res_violin.png" target="_blank">
-  <img src="https://raw.githubusercontent.com/MichaelGrupp/evo/master/doc/assets/res_violin.png" alt="evo" height="200" border="5" />
+  <img src="https://raw.githubusercontent.com/MichaelGrupp/evo/master/doc/assets/res_violin.png" alt="evo" height="175" border="5" />
 </a>
 <a href="https://raw.githubusercontent.com/MichaelGrupp/evo/master/doc/assets/markers.png" target="_blank">
-  <img src="https://raw.githubusercontent.com/MichaelGrupp/evo/master/doc/assets/markers.png" alt="evo" height="200" border="5" />
+  <img src="https://raw.githubusercontent.com/MichaelGrupp/evo/master/doc/assets/markers.png" alt="evo" height="175" border="5" />
 </a>
-<a href="https://raw.githubusercontent.com/MichaelGrupp/evo/master/doc/assets/res_stats.png" target="_blank">
-  <img src="https://raw.githubusercontent.com/MichaelGrupp/evo/master/doc/assets/res_stats.png" alt="evo" height="200" border="5" />
+<a href="https://raw.githubusercontent.com/MichaelGrupp/evo/master/doc/assets/map_tile_osm.png" target="_blank">
+  <img src="https://raw.githubusercontent.com/MichaelGrupp/evo/master/doc/assets/map_tile_osm.png" alt="evo" height="175" border="5" />
 </a>
 
 ---
@@ -57,22 +57,26 @@ You might also want to use a [virtual environment](https://github.com/MichaelGru
 ### From PyPi
 If you just want to use the executables of the latest release version, the easiest way is to run:
 ```bash
-pip install evo --upgrade --no-binary evo
+pip install evo
 ```
-This will download the package and its dependencies from [PyPI](https://pypi.org/project/evo/) and install or upgrade them. Depending on your OS, you might be able to use `pip2` or `pip3` to specify the Python version you want. Tab completion for Bash terminals is supported via the [argcomplete](https://github.com/kislyuk/argcomplete/) package on most UNIX systems - open a new shell after the installation to use it (without `--no-binary evo` the tab completion might not be installed properly). If you want, you can subscribe to new releases via https://libraries.io/pypi/evo.
+This will download the package and its dependencies from [PyPI](https://pypi.org/project/evo/) and install or upgrade them. If you want, you can subscribe to new releases via https://libraries.io/pypi/evo.
 
 ### From Source
 Run this in the repository's base folder:
 ```bash
-pip install --editable . --upgrade --no-binary evo
+pip install --editable .
 ```
+
+### Tab completion
+
+Tab completion is supported via the [argcomplete](https://github.com/kislyuk/argcomplete/) package. Run `activate-global-python-argcomplete` after the installation to use it.
 
 ### Dependencies
 
 **Python packages**
 
 evo has some required dependencies that are ***automatically resolved*** during installation with pip.
-They are specified in the `install_requires` part of the `setup.py` file.
+See the `pyproject.toml` file for all details.
 
 **PyQt5 (optional)**
 
@@ -84,11 +88,15 @@ Some ROS-related features require a ROS installation, see [here](http://www.ros.
 
 *Note:* reading ROS bag files works also without a ROS installation thanks to the great [rosbags](https://pypi.org/project/rosbags/) package that is installed together with evo. This allows you also to read ROS 1 & 2 bags even if you don't have one of those ROS distros installed. (except for reading `/tf` topics, because there we need the buffer implementation from ROS)
 
+**contextily (optional)**
+
+[contextily](https://contextily.readthedocs.io/en/latest/index.html) is required for [adding map tiles](https://github.com/MichaelGrupp/evo/wiki/Plotting#geographic-map-tiles) to plots of geo-referenced data.
+
 ---
 
 ## Command Line Interface
 
-After installation with setup.py or from pip, the following executables can be called globally from your command-line:
+After installation with pip, the following executables can be called globally from your command-line:
 
 **Metrics:**
 
@@ -206,7 +214,7 @@ A few "inoffical" scripts for special use-cases are collected  in the `contrib/`
 ---
 
 ## Trouble
-*":scream:, this piece of :shit: software doesn't do what I want!!1!1!!"*
+*"😱, this piece of 💩 software doesn't do what I want!!1!1!!"*
 
 **First aid:**
 * append `-h`/ `--help` to your command

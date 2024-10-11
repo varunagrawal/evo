@@ -19,7 +19,7 @@ along with evo.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 import os
-import pkgutil
+import importlib.util
 
 
 def get_default_plot_backend() -> str:
@@ -28,7 +28,7 @@ def get_default_plot_backend() -> str:
 
     backends = {"PyQt5": "Qt5Agg"}
     for pkg in backends:
-        if pkgutil.find_loader(pkg) is not None:
+        if importlib.util.find_spec(pkg) is not None:
             return backends[pkg]
     return "TkAgg"
 
@@ -50,6 +50,16 @@ DEFAULT_SETTINGS_DICT_DOC = {
         ("Only used in evo_traj's RPY plot: Euler rotation axis sequence.\n"
          "E.g. 'sxyz' or 'ryxy', where s=static or r=rotating frame.\n"
          "See evo/core/transformations.py for more information.")
+    ),
+    "map_tile_provider": (
+        "OpenStreetMap.Mapnik",
+        ("Map tile provider used by the --map_tile option.\n"
+         "Requires the contextily package to be installed.\n"
+         "See: https://contextily.readthedocs.io/en/latest/providers_deepdive.html")
+    ),
+    "map_tile_api_token": (
+        "",
+        "API token for the map_tile_provider, if required."
     ),
     "plot_axis_marker_scale": (
         0.,

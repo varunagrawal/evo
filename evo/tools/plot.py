@@ -41,6 +41,7 @@ from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.backend_bases import FigureCanvasBase
 from matplotlib.collections import LineCollection
+from matplotlib.ticker import FuncFormatter
 from matplotlib.transforms import Affine2D, Bbox
 
 from evo import EvoException
@@ -273,11 +274,11 @@ def set_aspect_equal(ax: Axes) -> None:
     ax.set_zlim3d([zmean - plot_radius, zmean + plot_radius])
 
 
-def _get_length_formatter(length_unit: Unit) -> typing.Callable:
+def _get_length_formatter(length_unit: Unit) -> FuncFormatter:
     def formatter(x, _):
         return "{0:g}".format(x / METER_SCALE_FACTORS[length_unit])
 
-    return formatter
+    return FuncFormatter(formatter)
 
 
 def prepare_axis(fig: Figure, plot_mode: PlotMode = PlotMode.xy,
@@ -471,7 +472,7 @@ def traj_colormap(ax: Axes, traj: trajectory.PosePath3D, array: ListOrArray,
     ax.autoscale_view(True, True, True)
     if plot_mode == PlotMode.xyz and isinstance(ax, Axes3D):
         min_z = np.amin(traj.positions_xyz[:, 2])
-        max_z = np.amax(traj.positions_xyz[:, 2])                
+        max_z = np.amax(traj.positions_xyz[:, 2])
         # Only adjust limits if there are z values to suppress mpl warning.
         if min_z != max_z:
             ax.set_zlim(min_z, max_z)
@@ -607,7 +608,7 @@ def traj_xyz(axarr: np.ndarray, traj: trajectory.PosePath3D, style: str = '-',
                       label=label, alpha=alpha)
         axarr[i].set_ylabel(ylabels[i])
     axarr[2].set_xlabel(xlabel)
-    if label:
+    if label and SETTINGS.plot_show_legend:
         axarr[0].legend(frameon=True)
 
 
@@ -645,8 +646,30 @@ def traj_rpy(axarr: np.ndarray, traj: trajectory.PosePath3D, style: str = '-',
                       label=label, alpha=alpha)
         axarr[i].set_ylabel(ylabels[i])
     axarr[2].set_xlabel(xlabel)
-    if label:
+    if label and SETTINGS.plot_show_legend:
         axarr[0].legend(frameon=True)
+
+
+def speeds(ax: Axes, traj: trajectory.PoseTrajectory3D, style: str = '-',
+           color="black", label: str = "", alpha: float = 1.):
+    """
+    Plots the speed between poses of a trajectory.
+    Note that a speed value is shown at the timestamp of the newer pose.
+    :param ax: matplotlib axis
+    :param traj: trajectory.PoseTrajectory3D object
+    :param style: matplotlib line style
+    :param color: matplotlib color
+    :param label: label (for legend)
+    :param alpha: alpha value for transparency
+    """
+    if not isinstance(traj, trajectory.PoseTrajectory3D):
+        raise PlotException("speeds can only be plotted with trajectories")
+    ax.plot(traj.timestamps[1:], traj.speeds, style, color=color, alpha=alpha,
+            label=label)
+    ax.set_xlabel("$t$ (s)")
+    ax.set_ylabel("$v$ (m/s)")
+    if label and SETTINGS.plot_show_legend:
+        ax.legend(frameon=True)
 
 
 def trajectories(fig: Figure, trajectories: typing.Union[
@@ -870,3 +893,27 @@ def ros_map(
         ax.invert_xaxis()
     if SETTINGS.plot_invert_yaxis:
         ax.invert_yaxis()
+
+
+def map_tile(ax: Axes, crs: str, provider: str = SETTINGS.map_tile_provider):
+    """
+    Downloads and inserts a map tile into the plot axis.
+    Note: requires the optional contextily package to be installed.
+    :param ax: matplotlib axes
+    :param crs: coordinate reference system (e.g. "EPSG:4326")
+    :param provider: tile provider, either as str (e.g. "OpenStreetMap.Mapnik")
+                     or directly as a TileProvider object
+    """
+    if isinstance(ax, Axes3D):
+        raise PlotException("map_tile can't be drawn into a 3D axis")
+
+    try:
+        import contextily as cx
+        from evo.tools import contextily_helper
+    except ImportError as error:
+        raise PlotException(
+            f"contextily package is required for plotting map tiles: {error}")
+
+    if isinstance(provider, str):
+        provider = contextily_helper.get_provider(provider_str=provider)
+    cx.add_basemap(ax, crs=crs, source=provider)
