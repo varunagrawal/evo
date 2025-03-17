@@ -95,8 +95,10 @@ def load_trajectories(args):
                 if args.ref in topics:
                     topics.remove(args.ref)
                 if len(topics) == 0:
-                    die("No topics of supported types: {}".format(" ".join(
-                        file_interface.SUPPORTED_ROS_MSGS)))
+                    die("Found no topics of supported types:\n\n- {}"
+                        "\n\nIf you want to load TF trajectories, "
+                        "specify them like: /tf:map.base_link".format(
+                            "\n- ".join(file_interface.SUPPORTED_ROS_MSGS)))
             else:
                 topics = args.topics
             for topic in topics:
@@ -312,7 +314,7 @@ def run(args):
         fig_rpy, axarr_rpy = plt.subplots(3, sharex="col",
                                           figsize=tuple(SETTINGS.plot_figsize))
         fig_traj = plt.figure(figsize=tuple(SETTINGS.plot_figsize))
-        fig_speed = plt.figure()
+        fig_speed = None
 
         plot_mode = plot.PlotMode[args.plot_mode]
         length_unit = Unit(SETTINGS.plot_trajectory_length_unit)
@@ -351,12 +353,15 @@ def run(args):
                           alpha=SETTINGS.plot_reference_alpha,
                           start_timestamp=start_time)
             if isinstance(ref_traj, trajectory.PoseTrajectory3D):
+                if fig_speed is None:
+                    fig_speed = plt.figure()
                 try:
                     plot.speeds(fig_speed.gca(), ref_traj,
                                 style=SETTINGS.plot_reference_linestyle,
                                 color=SETTINGS.plot_reference_color,
                                 alpha=SETTINGS.plot_reference_alpha,
-                                label=short_traj_name)
+                                label=short_traj_name,
+                                start_timestamp=start_time)
                 except trajectory.TrajectoryException as error:
                     logger.error(
                         f"Can't plot speeds of {short_traj_name}: {error}")
@@ -402,12 +407,15 @@ def run(args):
                           alpha=SETTINGS.plot_trajectory_alpha,
                           start_timestamp=start_time)
             if isinstance(traj, trajectory.PoseTrajectory3D):
+                if fig_speed is None:
+                    fig_speed = plt.figure()
                 try:
                     plot.speeds(fig_speed.gca(), traj,
                                 style=SETTINGS.plot_trajectory_linestyle,
                                 color=color,
                                 alpha=SETTINGS.plot_trajectory_alpha,
-                                label=short_traj_name)
+                                label=short_traj_name,
+                                start_timestamp=start_time)
                 except trajectory.TrajectoryException as error:
                     logger.error(
                         f"Can't plot speeds of {short_traj_name}: {error}")
@@ -424,7 +432,8 @@ def run(args):
         plot_collection.add_figure("trajectories", fig_traj)
         plot_collection.add_figure("xyz", fig_xyz)
         plot_collection.add_figure("rpy", fig_rpy)
-        plot_collection.add_figure("speeds", fig_speed)
+        if fig_speed:
+            plot_collection.add_figure("speeds", fig_speed)
         if args.plot:
             plot_collection.show()
         if args.save_plot:

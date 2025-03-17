@@ -20,11 +20,14 @@ along with evo.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
 import importlib.util
+import sys
 
 
 def get_default_plot_backend() -> str:
     if os.name == "posix" and os.getenv("DISPLAY", default="") == "":
-        return "Agg"
+        # Expect Quartz as default on Mac, X11 DISPLAY is not there by default.
+        if sys.platform != "darwin":
+            return "Agg"
 
     backends = {"PyQt5": "Qt5Agg"}
     for pkg in backends:
@@ -61,6 +64,10 @@ DEFAULT_SETTINGS_DICT_DOC = {
         "",
         "API token for the map_tile_provider, if required."
     ),
+    "plot_3d_zoom": (
+        0.9,
+        "Default zoom factor for 3D plots. Can be used to avoid clipping labels."
+    ),
     "plot_axis_marker_scale": (
         0.,
         "Scaling parameter of pose coordinate frame markers. 0 will draw nothing."
@@ -85,7 +92,7 @@ DEFAULT_SETTINGS_DICT_DOC = {
          "Can also be set to 'none'.")
     ),
     "plot_figsize": (
-        [6, 6],
+        [10, 10],
         "The default size of one (sub)plot figure (width, height)."
     ),
     "plot_fontfamily": (
@@ -103,6 +110,11 @@ DEFAULT_SETTINGS_DICT_DOC = {
     "plot_invert_yaxis": (
         False,
         "Invert the y-axis of plots."
+    ),
+    "plot_legend_loc": (
+        "best",
+        "Plot legend location. See here for the available 'loc' options:\n"
+        "https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.legend.html"
     ),
     "plot_linewidth": (
         1.5,

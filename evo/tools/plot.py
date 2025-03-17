@@ -71,10 +71,15 @@ def apply_settings(settings: SettingsContainer = SETTINGS):
                 palette=settings.plot_seaborn_palette)
 
     mpl.rcParams.update({
+        "legend.loc": settings.plot_legend_loc,
         "lines.linewidth": settings.plot_linewidth,
         "text.usetex": settings.plot_usetex,
+        # NOTE: don't call tight_layout manually anymore. See warning here:
+        # https://matplotlib.org/stable/users/explain/axes/constrainedlayout_guide.html
+        "figure.constrained_layout.use": True,
         "font.family": settings.plot_fontfamily,
-        "pgf.texsystem": settings.plot_texsystem
+        "pgf.texsystem": settings.plot_texsystem,
+        "savefig.bbox": "tight",
     })
     if "xkcd" in settings:
         plt.xkcd()
@@ -122,7 +127,6 @@ class PlotCollection:
         return self.title + " (" + str(len(self.figures)) + " figure(s))"
 
     def add_figure(self, name: str, fig: Figure) -> None:
-        fig.tight_layout()
         self.figures[name] = fig
 
     @staticmethod
@@ -178,7 +182,6 @@ class PlotCollection:
         nb = ttk.Notebook(self.root_window)
         nb.grid(row=1, column=0, sticky='NESW')
         for name, fig in self.figures.items():
-            fig.tight_layout()
             tab = ttk.Frame(nb)
             canvas = FigureCanvasTkAgg(self.figures[name], master=tab)
             canvas.draw()
@@ -230,7 +233,6 @@ class PlotCollection:
             import matplotlib.backends.backend_pdf
             pdf = matplotlib.backends.backend_pdf.PdfPages(file_path)
             for name, fig in self.figures.items():
-                # fig.tight_layout()  # TODO
                 pdf.savefig(fig)
             pdf.close()
             logger.info("Plots saved to " + file_path)
@@ -240,7 +242,6 @@ class PlotCollection:
                 if confirm_overwrite and not user.check_and_confirm_overwrite(
                         dest):
                     return
-                fig.tight_layout()
                 fig.savefig(dest)
                 logger.info("Plot saved to " + dest)
 
@@ -297,7 +298,9 @@ def prepare_axis(fig: Figure, plot_mode: PlotMode = PlotMode.xy,
         raise PlotException(f"{length_unit} is not a length unit")
 
     if plot_mode == PlotMode.xyz:
-        ax = fig.add_subplot(subplot_arg, projection="3d")
+        ax: Axes3D = fig.add_subplot(subplot_arg, projection="3d")
+        # Zoom can help against clipping labels. See issue #718.
+        ax.set_box_aspect(None, zoom=SETTINGS.plot_3d_zoom)
     else:
         ax = fig.add_subplot(subplot_arg)
     if plot_mode in {PlotMode.xy, PlotMode.xz, PlotMode.xyz}:
@@ -489,8 +492,9 @@ def traj_colormap(ax: Axes, traj: trajectory.PosePath3D, array: ListOrArray,
         "{0:0.3f}".format(max_map)
     ])
     if title:
-        ax.legend(frameon=True)
         ax.set_title(title)
+    if SETTINGS.plot_show_legend:
+        ax.legend(frameon=True)
     if plot_start_end_markers:
         add_start_end_markers(ax, plot_mode, traj, start_color=colors[0],
                               end_color=colors[-1])
@@ -594,7 +598,7 @@ def traj_xyz(axarr: np.ndarray, traj: trajectory.PosePath3D, style: str = '-',
             x = traj.timestamps
         xlabel = "$t$ (s)"
     else:
-        x = np.arange(0., len(traj.positions_xyz))
+        x = np.arange(0., len(traj.positions_xyz), dtype=float)
         xlabel = "index"
     ylabels = [
         f"$x$ ({length_unit.value})", f"$y$ ({length_unit.value})",
@@ -638,7 +642,7 @@ def traj_rpy(axarr: np.ndarray, traj: trajectory.PosePath3D, style: str = '-',
             x = traj.timestamps
         xlabel = "$t$ (s)"
     else:
-        x = np.arange(0., len(angles))
+        x = np.arange(0., len(angles), dtype=float)
         xlabel = "index"
     ylabels = ["$roll$ (deg)", "$pitch$ (deg)", "$yaw$ (deg)"]
     for i in range(0, 3):
@@ -651,7 +655,8 @@ def traj_rpy(axarr: np.ndarray, traj: trajectory.PosePath3D, style: str = '-',
 
 
 def speeds(ax: Axes, traj: trajectory.PoseTrajectory3D, style: str = '-',
-           color="black", label: str = "", alpha: float = 1.):
+           color="black", label: str = "", alpha: float = 1.,
+           start_timestamp: typing.Optional[float] = None):
     """
     Plots the speed between poses of a trajectory.
     Note that a speed value is shown at the timestamp of the newer pose.
@@ -661,10 +666,16 @@ def speeds(ax: Axes, traj: trajectory.PoseTrajectory3D, style: str = '-',
     :param color: matplotlib color
     :param label: label (for legend)
     :param alpha: alpha value for transparency
+    :param start_timestamp: optional start time of the reference
+                            (for x-axis alignment)
     """
     if not isinstance(traj, trajectory.PoseTrajectory3D):
         raise PlotException("speeds can only be plotted with trajectories")
-    ax.plot(traj.timestamps[1:], traj.speeds, style, color=color, alpha=alpha,
+    if start_timestamp:
+        timestamps = traj.timestamps - start_timestamp
+    else:
+        timestamps = traj.timestamps
+    ax.plot(timestamps[1:], traj.speeds, style, color=color, alpha=alpha,
             label=label)
     ax.set_xlabel("$t$ (s)")
     ax.set_ylabel("$v$ (m/s)")
@@ -672,15 +683,17 @@ def speeds(ax: Axes, traj: trajectory.PoseTrajectory3D, style: str = '-',
         ax.legend(frameon=True)
 
 
-def trajectories(fig: Figure, trajectories: typing.Union[
-        trajectory.PosePath3D, typing.Sequence[trajectory.PosePath3D],
-        typing.Dict[str, trajectory.PosePath3D]], plot_mode=PlotMode.xy,
-                 title: str = "", subplot_arg: int = 111,
-                 plot_start_end_markers: bool = False,
+def trajectories(fig_or_ax: typing.Union[Figure, Axes],
+                 trajectories: typing.Union[
+                     trajectory.PosePath3D,
+                     typing.Sequence[trajectory.PosePath3D],
+                     typing.Dict[str, trajectory.PosePath3D]],
+                 plot_mode=PlotMode.xy, title: str = "",
+                 subplot_arg: int = 111, plot_start_end_markers: bool = False,
                  length_unit: Unit = Unit.meters) -> None:
     """
     high-level function for plotting multiple trajectories
-    :param fig: matplotlib figure
+    :param fig: matplotlib figure, or maptplotlib axes
     :param trajectories: instance or container of PosePath3D or derived
     - if it's a dictionary, the keys (names) will be used as labels
     :param plot_mode: e.g. plot.PlotMode.xy
@@ -691,7 +704,10 @@ def trajectories(fig: Figure, trajectories: typing.Union[
     :param length_unit: Set to another length unit than meters to scale plots.
                         Note that trajectory data is still expected in meters.
     """
-    ax = prepare_axis(fig, plot_mode, subplot_arg, length_unit)
+    if isinstance(fig_or_ax, Axes):
+        ax = fig_or_ax
+    else:
+        ax = prepare_axis(fig_or_ax, plot_mode, subplot_arg, length_unit)
     if title:
         ax.set_title(title)
 
@@ -779,7 +795,8 @@ def error_array(ax: Axes, err_array: ListOrArray,
     plt.ylabel(ylabel if ylabel else name)
     plt.xlabel(xlabel)
     plt.title(title)
-    plt.legend(frameon=True)
+    if SETTINGS.plot_show_legend:
+        plt.legend(frameon=True)
 
 
 def ros_map(

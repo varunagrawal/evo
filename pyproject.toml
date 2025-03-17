@@ -37,6 +37,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: Implementation :: CPython"
 ]
 keywords = [
@@ -48,7 +49,7 @@ requires-python = ">=3.8"
 
 dependencies = [
     "numpy>=1.18.5",
-    "matplotlib",
+    "matplotlib>=3.6.0",
     "scipy>=1.2",
     "pandas",
     "numexpr>=2.7.3",
