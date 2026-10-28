@@ -302,11 +302,15 @@ def run(args):
                         args.verbose, args.full_check)
 
     if args.plot or args.save_plot or args.serialize_plot:
-        import numpy as np
-        from evo.tools import plot
-        import matplotlib.pyplot as plt
         import matplotlib.cm as cm
+        import matplotlib.pyplot as plt
+        import numpy as np
         import seaborn as sns
+
+        from evo.tools import plot
+
+        # Apply the default theme
+        sns.set_theme(style="whitegrid", palette="colorblind", context="paper")
 
         plot_collection = plot.PlotCollection("evo_traj - trajectory plot")
         fig_xyz, axarr_xyz = plt.subplots(3, sharex="col",
